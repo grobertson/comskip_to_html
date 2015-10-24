@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>{{ videofile }}</title>
+<style type="text/css">
+.blocks {
+  border-collapse: collapse;
+}
+.blocks th {
+  padding: 6px;
+  text-align: left;
+  color: #333;
+  background-color: #eee;
+  border: 1px solid #b9b9b9;
+}
+.blocks td {
+  padding: 6px;
+  text-align: right;
+  background-color: #fff;
+  border: 1px solid #b9b9b9;
+}
+.blocks td.CM {
+  background-color: #f0f;
+}
+.blocks td.MV {
+  background-color: #0f0;
+}
+.props {
+  border-collapse: collapse;
+}
+.props th {
+  background-color: #bbf;
+}
+span.changed {
+  text-decoration: line-through;
+}
+.thums {
+  border-collapse: collapse;
+}
+textarea {
+  width: 80%;
+  height: 10em;
+}
+</style>
+<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script type="text/javascript">
+var blocks = [];
+{% for b in comskip.blocks %}
+blocks.push({ no: {{ b.no }}, isCM: {{ "true" if b.isCM else "false" }}, fs: {{ b.fs }}, fe: {{ b.fe }}, ts: {{ b.ts }}, te: {{ b.te }} });
+{% endfor %}
+</script>
+</head>
+<body>
+<table class="blocks">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>CM</th>
+            <th>time/frame</th>
+            <th>scene</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in comskip.blocks %}
+            <tr>
+                <td>{{ b.no }}</td>
+                <td class="{{ "CM" if b.isCM else "MV" }}" id="{{ b.no }}"><span class="orig">{{ "CM" if b.isCM else "MV" }}</span><br /><span class="mod"></span><br /><button class="changeCM">!!</button></td>
+                <td>
+                    START<br />{{ to_timestamp(b.ts) }}<br />{{ b.fs }}f<br /><br />
+                    END<br />{{ to_timestamp(b.te) }}<br />{{ b.fe }}f<br /><br />
+                    LENGTH<br />{{ to_timestamp(b.len) }}<br />
+                </td>
+                <td style="text-align: left">
+                    <table class="thums">
+                        <tr>
+                            <td><img src="{{ comskip.video.get_frame_img(b.fs, dataurl=True) }}" /></td>
+                            {% for k in comskip.video.get_near_keyframes(b.fs) %}
+                                <td><img src="{{ comskip.video.get_frame_img(k, dataurl=True) }}" /></td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><input type="RADIO" class="fs" name="fs{{b.no}}" value="{{b.fs}}" data-no="{{b.no}}" data-f="{{b.fs}}" data-t="{{b.ts}}" checked="checked"/>
+                              {{b.fs}}f,{{ to_timestamp(b.ts) }}
+                            </td>
+                            {% for k in comskip.video.get_near_keyframes(b.fs) %}
+                            <td><input type="RADIO" class="fs" name="fs{{b.no}}" value="{{k}}" data-no="{{b.no}}" data-f="{{k}}" data-t="{{comskip.video.get_pts(k)}}"/>
+                              {{k}}f,{{ to_timestamp(comskip.video.get_pts(k)) }}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                    </table>
+                    <hr />
+                    <table class="thums">
+                        <tr>
+                            <td><img src="{{ comskip.video.get_frame_img(b.fe, dataurl=True) }}" /></td>
+                            {% for k in comskip.video.get_near_keyframes(b.fe) %}
+                                <td><img src="{{ comskip.video.get_frame_img(k, dataurl=True) }}" /></td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><input type="RADIO" class="fe" name="fe{{b.no}}" value="{{b.fe}}" data-no="{{b.no}}" data-f="{{b.fe}}" data-t="{{b.te}}" checked="checked"/>
+                              {{b.fe}}f,{{ to_timestamp(b.te) }}
+                            </td>
+                            {% for k in comskip.video.get_near_keyframes(b.fe) %}
+                            <td><input type="RADIO" class="fe" name="fe{{b.no}}" value="{{k}}" data-no="{{b.no}}" data-f="{{k}}" data-t="{{comskip.video.get_pts(k)}}"/>
+                              {{k}}f,{{ to_timestamp(comskip.video.get_pts(k)) }}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                    </table>
+                    <table class="props">
+                        <thead>
+                            <th>sbf</th>
+                            <th>sc</th>
+                            <th>scr</th>
+                            <th>cmb</th>
+                            <th>ar</th>
+                            <th>bri</th>
+                            <th>logo</th>
+                            <th>stdev</th>
+                            <th>cut reason</th>
+                        </thead>
+                        <tbody>
+                            <td>{{ b.sbf }}</td>
+                            <td>{{ b.sc }}</td>
+                            <td>{{ b.scr }}</td>
+                            <td>{{ b.cmb }}</td>
+                            <td>{{ b.ar }}</td>
+                            <td>{{ b.bri }}</td>
+                            <td>{{ b.logo }}</td>
+                            <td>{{ b.stdev }}</td>
+                            <td>{{ b.cut }}</td>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<button id="gen">生成</button>
+<textarea id="py">
+</textarea>
+<textarea id="ffmpeg">
+</textarea>
+<script type="text/javascript">
+$(document).ready(function(){
+  $("button#gen").click(function(){
+    var py = "#PY\nadm = Avidemux()\neditor = Editor()\nadm.clearSegments()\n";
+    var ffmpeg = "#!/bin/bash\nffmpeg=/usr/bin/ffmpeg\nm2ts='{{ videofile }}'\nbn=${m2ts%.*}\n\n" + 'rm "${bn}.list.txt"\n\n';
+
+    var segments = [];
+    var seg_start = -1;
+    var seg_start_t = -1;
+    var last_fe = -1;
+    var last_te = -1;
+    var i;
+    for (i = 0; i < blocks.length; i++) {
+      if (seg_start == -1 && !blocks[i]["isCM"]) {
+        seg_start = blocks[i]["fs"];
+        seg_start_t = blocks[i]["ts"];
+      } else if (seg_start != -1 && blocks[i]["isCM"]) {
+        segments.push({s: seg_start, e: last_fe, ts: seg_start_t, te: last_te});
+        seg_start = -1;
+      }
+      last_fe = blocks[i]["fe"];
+      last_te = blocks[i]["te"];
+    }
+    if (seg_start != -1) {
+      segments.push({s: seg_start, e: last_fe, ts: seg_start_t, te: last_te});
+    }
+    for (i = 0; i < segments.length; i++) {
+      var s = segments[i]["s"];
+      var e = segments[i]["e"];
+      var ts = segments[i]["ts"];
+      var te = segments[i]["te"];
+      py += "adm.addSegment(0, editor.getPts(" + s + "), editor.getPts(" + e + ") - editor.getPts(" + s + "))\n";
+      ffmpeg += '$ffmpeg -i "$m2ts" -ss ' + ts + ' -to ' + te + ' -c:v copy -c:a copy -y "${bn}.chapter' + i + '.ts"\n';
+      ffmpeg += 'echo file "\'${bn}.chapter' + i + '.ts\'" >> "${bn}.list.txt"\n\n';
+    }
+
+    ffmpeg += '$ffmpeg -f concat -i "${bn}.list.txt" -c copy "${bn}.nocm.m2ts"\n';
+
+    $("textarea#py").val(py);
+    $("textarea#ffmpeg").val(ffmpeg);
+  });
+  $("button.changeCM").click(function(){
+    var td = $(this).parent();
+    td.toggleClass("CM");
+    td.toggleClass("MV");
+    var span_orig = td.children(".orig");
+    span_orig.toggleClass("changed");
+    var span_mod = td.children(".mod");
+    if (span_mod.text() === "") {
+      if (span_orig.text() === "CM") {
+        span_mod.text("MV");
+      } else {
+        span_mod.text("CM");
+      }
+    } else {
+      span_mod.text("");
+    }
+    var idx = parseInt(td.attr("id"));
+    blocks[idx]["isCM"] = !blocks[idx]["isCM"];
+  });
+  $("input.fs:radio").change(function(){
+    var idx = $(this).data("no");
+    var fs = $(this).data("f");
+    var ts = $(this).data("t");
+    blocks[idx]["fs"] = fs;
+    blocks[idx]["ts"] = ts;
+  });
+  $("input.fe:radio").change(function(){
+    var idx = $(this).data("no");
+    var fe = $(this).data("f");
+    var te = $(this).data("t");
+    blocks[idx]["fe"] = fe;
+    blocks[idx]["te"] = te;
+  });
+});
+</script>
+</body>
+</html>
