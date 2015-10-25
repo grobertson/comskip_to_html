@@ -10,7 +10,6 @@ import sys
 import click
 import ffms
 from PIL import Image
-import pandas as pd
 import jinja2
 
 
@@ -70,10 +69,6 @@ class ComSkipResult:
         self.videofile = videofile
         (basename, ext) = os.path.splitext(videofile)
         self.basename = basename
-        csv = "%s.csv" % basename
-        if os.path.exists(csv):
-            self.csv_df = pd.read_csv(csv, header=1, index_col=[0])
-            self.csv_df.index.name = None
         log = "%s.log" % basename
         if os.path.exists(log):
             with open(log) as f:

@@ -17,6 +17,7 @@ comskipでCM検出したときのブロック分割情報をもとに誤検出�
 * Jinja2
 * numpy
 * Pillow
+* click
 
 pip で入れてください。
 
@@ -32,7 +33,6 @@ pip で入れてください。
 なんか、get-pip.pyというのを落としてpython3.3で実行すればよいみたいです（大雑把）。
 
 * [ffms-0.3a](https://bitbucket.org/spirit/ffms/downloads)
-* Jinja2
 * numpy
 * Pillow
 * pywin32
@@ -40,6 +40,10 @@ pip で入れてください。
 ffmsはwin32/win-amd64のmsiを実行してインストール。他は[Unofficial Windows Binaries for Python Extension Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/)のバイナリを
 使えば良いんじゃないでしょうか。
 
+* Jinja2
+* click
+
+pipで入れましょう
 
 ## 使い方
 
