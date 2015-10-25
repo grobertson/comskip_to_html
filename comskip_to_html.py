@@ -130,7 +130,7 @@ class ComSkipResult:
         tmpl_env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(sys.argv[0])), autoescape=False)
         tmpl = tmpl_env.get_template("comskip_to_html.tmpl")
         tmpl_vars = {"videofile": self.videofile, "comskip": self, "to_timestamp": to_timestamp, "w": w, "h": h}
-        with open(self.basename + ".html", "w") as f:
+        with open(self.basename + ".html", "w", encoding="utf-8") as f:
             f.write(tmpl.render(tmpl_vars))
 
 
