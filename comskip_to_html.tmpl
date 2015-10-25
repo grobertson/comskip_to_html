@@ -35,8 +35,12 @@
 span.changed {
   text-decoration: line-through;
 }
-.thums {
+.thumbs {
   border-collapse: collapse;
+}
+.scr {
+  overflow-x: scroll;
+  width: 1000px;
 }
 textarea {
   width: 80%;
@@ -44,11 +48,24 @@ textarea {
 }
 </style>
 <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-scrollTo/2.1.0/jquery.scrollTo.min.js"></script>
 <script type="text/javascript">
 var blocks = [];
 {% for b in comskip.blocks %}
-blocks.push({ no: {{ b.no }}, isCM: {{ "true" if b.isCM else "false" }}, fs: {{ b.fs }}, fe: {{ b.fe }}, ts: {{ b.ts }}, te: {{ b.te }} });
+blocks.push({no: {{ b.no }}, isCM: {{ "true" if b.isCM else "false" }}, fs: {{ b.fs }}, fe: {{ b.fe }}, ts: {{ b.ts }}, te: {{ b.te }}});
 {% endfor %}
+var keyframes = [];
+{% for k in comskip.video.vs.track.keyframes %}
+keyframes.push({f: {{k}}, t: {{comskip.video.get_pts(k)}}, ts: "{{to_timestamp(comskip.video.get_pts(k))}}", url: "{{ comskip.video.get_frame_img(k, dataurl=True) }}"});
+{% endfor %}
+
+function get_keyframe_index(k){
+  var i, l;
+  for(i = 0, l = keyframes.length; i < l; ++i) {
+    if(keyframes[i].f >= k) return i;
+  }
+  return keyframes.length - 1;
+}
 </script>
 </head>
 <body>
@@ -58,7 +75,7 @@ blocks.push({ no: {{ b.no }}, isCM: {{ "true" if b.isCM else "false" }}, fs: {{ 
             <th>#</th>
             <th>CM</th>
             <th>time/frame</th>
-            <th>scene</th>
+            <th class="scene">scene</th>
         </tr>
     </thead>
     <tbody>
@@ -71,44 +88,58 @@ blocks.push({ no: {{ b.no }}, isCM: {{ "true" if b.isCM else "false" }}, fs: {{ 
                     END<br />{{ to_timestamp(b.te) }}<br />{{ b.fe }}f<br /><br />
                     LENGTH<br />{{ to_timestamp(b.len) }}<br />
                 </td>
-                <td style="text-align: left">
-                    <table class="thums">
+                <td style="text-align: left" class="scene">
+                    <div class="scr">
+                    {% set s = comskip.video.get_near_keyframes(b.fs) %}
+                    <table class="thumbs">
                         <tr>
-                            <td><img src="{{ comskip.video.get_frame_img(b.fs, dataurl=True) }}" /></td>
+                            <td><img class="thumb" src="{{ comskip.video.get_frame_img(b.fs, dataurl=True) }}" width="{{w}}" height="{{h}}"/></td>
+                            <td><button id="button-fsl{{b.no}}" class="add-fs-left" data-f="{{s[0]}}" data-b="{{b.no}}" data-type="fs">+</button></td>
                             {% for k in comskip.video.get_near_keyframes(b.fs) %}
-                                <td><img src="{{ comskip.video.get_frame_img(k, dataurl=True) }}" /></td>
+                                <td><img class="thumb emb" data-f="{{k}}" width="{{w}}" height="{{h}}"/></td>
                             {% endfor %}
+                            <td><button id="button-fsr{{b.no}}" class="add-fs-right" data-f="{{s[-1]}}" data-b="{{b.no}}" data-type="fs">+</button></td>
                         </tr>
                         <tr>
                             <td><input type="RADIO" class="fs" name="fs{{b.no}}" value="{{b.fs}}" data-no="{{b.no}}" data-f="{{b.fs}}" data-t="{{b.ts}}" checked="checked"/>
                               {{b.fs}}f,{{ to_timestamp(b.ts) }}
                             </td>
-                            {% for k in comskip.video.get_near_keyframes(b.fs) %}
+                            <td id="td-fsl{{b.no}}"><br /></td>
+                            {% for k in s %}
                             <td><input type="RADIO" class="fs" name="fs{{b.no}}" value="{{k}}" data-no="{{b.no}}" data-f="{{k}}" data-t="{{comskip.video.get_pts(k)}}"/>
                               {{k}}f,{{ to_timestamp(comskip.video.get_pts(k)) }}
                             </td>
                             {% endfor %}
+                            <td id="td-fsr{{b.no}}"><br /></td>
                         </tr>
                     </table>
+                    </div>
                     <hr />
-                    <table class="thums">
+                    <div class="scr">
+                    {% set e = comskip.video.get_near_keyframes(b.fe) %}
+                    <table class="thumbs">
                         <tr>
-                            <td><img src="{{ comskip.video.get_frame_img(b.fe, dataurl=True) }}" /></td>
+                            <td><img class="thumb" src="{{ comskip.video.get_frame_img(b.fe, dataurl=True) }}" width="{{w}}" height="{{h}}" /></td>
+                            <td><button id="button-fel{{b.no}}" class="add-fe-left" data-f="{{e[0]}}" data-b="{{b.no}}" data-type="fe">+</button></td>
                             {% for k in comskip.video.get_near_keyframes(b.fe) %}
-                                <td><img src="{{ comskip.video.get_frame_img(k, dataurl=True) }}" /></td>
+                                <td><img class="thumb emb" data-f="{{k}}" width="{{w}}" height="{{h}}" /></td>
                             {% endfor %}
+                            <td><button id="button-fer{{b.no}}" class="add-fe-right" data-f="{{e[-1]}}" data-b="{{b.no}}" data-type="fe">+</button></td>
                         </tr>
                         <tr>
                             <td><input type="RADIO" class="fe" name="fe{{b.no}}" value="{{b.fe}}" data-no="{{b.no}}" data-f="{{b.fe}}" data-t="{{b.te}}" checked="checked"/>
                               {{b.fe}}f,{{ to_timestamp(b.te) }}
                             </td>
-                            {% for k in comskip.video.get_near_keyframes(b.fe) %}
+                            <td id="td-fel{{b.no}}"><br /></td>
+                            {% for k in e %}
                             <td><input type="RADIO" class="fe" name="fe{{b.no}}" value="{{k}}" data-no="{{b.no}}" data-f="{{k}}" data-t="{{comskip.video.get_pts(k)}}"/>
                               {{k}}f,{{ to_timestamp(comskip.video.get_pts(k)) }}
                             </td>
                             {% endfor %}
+                            <td id="td-fer{{b.no}}"><br /></td>
                         </tr>
                     </table>
+                    </div>
                     <table class="props">
                         <thead>
                             <th>sbf</th>
@@ -145,6 +176,7 @@ blocks.push({ no: {{ b.no }}, isCM: {{ "true" if b.isCM else "false" }}, fs: {{ 
 </textarea>
 <script type="text/javascript">
 $(document).ready(function(){
+  // 生成ボタン
   $("button#gen").click(function(){
     var py = "#PY\nadm = Avidemux()\neditor = Editor()\nadm.clearSegments()\n";
     var ffmpeg = "#!/bin/bash\nffmpeg=/usr/bin/ffmpeg\nm2ts='{{ videofile }}'\nbn=${m2ts%.*}\n\n" + 'rm "${bn}.list.txt"\n\n';
@@ -184,6 +216,7 @@ $(document).ready(function(){
     $("textarea#py").val(py);
     $("textarea#ffmpeg").val(ffmpeg);
   });
+  // CM/本編誤判定修正ボタン
   $("button.changeCM").click(function(){
     var td = $(this).parent();
     td.toggleClass("CM");
@@ -203,20 +236,105 @@ $(document).ready(function(){
     var idx = parseInt(td.attr("id"));
     blocks[idx]["isCM"] = !blocks[idx]["isCM"];
   });
-  $("input.fs:radio").change(function(){
+  // 分割位置修正ラジオボタン
+  function change_fs(){
     var idx = $(this).data("no");
     var fs = $(this).data("f");
     var ts = $(this).data("t");
     blocks[idx]["fs"] = fs;
     blocks[idx]["ts"] = ts;
-  });
-  $("input.fe:radio").change(function(){
+  }
+  $("input.fs:radio").change(change_fs);
+  function change_fe(){
     var idx = $(this).data("no");
     var fe = $(this).data("f");
     var te = $(this).data("t");
     blocks[idx]["fe"] = fe;
     blocks[idx]["te"] = te;
+  }
+  $("input.fe:radio").change(change_fe);
+  // サムネイルをリストから取得
+  $("img.thumb.emb").each(function(){
+    $(this).attr("src", keyframes[get_keyframe_index($(this).data("f"))].url);
   });
+  // サムネイル追加ボタン：ブロック開始/終了・左
+  function add_left(){
+    var td1 = $($(this).parent().get(0));
+    var f = $(this).data("f");
+    var b = $(this).data("b");
+    var t = $(this).data("type");
+    var i, l;
+    var idx = -1;
+    for(i = 0, l = keyframes.length; i < l; i++) {
+      if(f === keyframes[i].f) {
+        idx = i;
+        kf = keyframes[i];
+        break;
+      }
+    }
+    if(idx === -1 || idx === 0) {
+      $(this).attr("disabled", "1");
+      return;
+    }
+    var kf = keyframes[idx-1];
+    td1.after('<td><img src="' + kf.url + '"</td>');
+    var id = $(this).attr("id");
+    var td2 = $("#" + id.replace("button", "td"));
+    var ntd2 = $('<td><input type="RADIO" class="' + t + '" name="' + t + b + '" value="' + kf.f + '" data-no="' + b + '" data-f="' + kf.f
+       + '" data-t="' + kf.t + '"/>' + kf.f + 'f,' + kf.ts + '</td>');
+    if(t === "fs"){
+      ntd2.children("input").change(change_fs);
+    } else {
+      ntd2.children("input").change(change_fe);
+    }
+    td2.after(ntd2);
+    $(this).data("f", kf.f);
+    if(idx === 1) {
+      $(this).attr("disabled", "1");
+    }
+  }
+  $("button.add-fs-left").click(add_left);
+  $("button.add-fe-left").click(add_left);
+  // サムネイル追加ボタン：ブロック開始/終了・右
+  function add_right(){
+    var td1 = $($(this).parent().get(0));
+    var f = $(this).data("f");
+    var b = $(this).data("b");
+    var t = $(this).data("type");
+    var i, l;
+    var idx = -1;
+    for(i = 0, l = keyframes.length; i < l; i++) {
+      if(f === keyframes[i].f) {
+        idx = i;
+        kf = keyframes[i];
+        break;
+      }
+    }
+    if(idx === -1 || idx === keyframes.length - 1) {
+      $(this).attr("disabled", "1");
+      return;
+    }
+    var kf = keyframes[idx+1];
+    td1.before('<td><img src="' + kf.url + '"</td>');
+    var id = $(this).attr("id");
+    var td2 = $("#" + id.replace("button", "td"));
+    var ntd2 = $('<td><input type="RADIO" class="' + t + '" name="' + t + b + '" value="' + kf.f + '" data-no="' + b + '" data-f="' + kf.f
+       + '" data-t="' + kf.t + '"/>' + kf.f + 'f,' + kf.ts + '</td>');
+    if(t === "fs"){
+      ntd2.children("input").change(change_fs);
+    } else {
+      ntd2.children("input").change(change_fe);
+    }
+    td2.before(ntd2);
+    $(this).data("f", kf.f);
+    if(idx === 1) {
+      $(this).attr("disabled", "1");
+    }
+    // スクロール
+    $(this).parents(".scr").scrollTo($(this));
+  }
+  $("button.add-fs-right").click(add_right);
+  $("button.add-fe-right").click(add_right);
 });
 </script>
 </body>

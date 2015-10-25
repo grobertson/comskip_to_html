@@ -50,8 +50,8 @@ class FFMSVideo:
         img = self._get_img_by_frame(frame)
         if dataurl:
             f = BytesIO()
-            img.save(f, "PNG")
-            return 'data:img/png;base64,' + base64.b64encode(f.getvalue()).decode('utf-8').replace('\n', '')
+            img.save(f, "JPEG")
+            return 'data:img/jpeg;base64,' + base64.b64encode(f.getvalue()).decode('utf-8').replace('\n', '')
         return img
 
     def get_near_keyframes(self, frame, delta=60):
@@ -129,9 +129,12 @@ class ComSkipResult:
 
     def to_html(self):
         self.video.set_scale(1 / 12)
+        f = self.video.vs.get_frame(0)
+        w = f.ScaledWidth
+        h = f.ScaledHeight
         tmpl_env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(sys.argv[0])), autoescape=False)
         tmpl = tmpl_env.get_template("comskip_to_html.tmpl")
-        tmpl_vars = {"videofile": self.videofile, "comskip": self, "to_timestamp": to_timestamp}
+        tmpl_vars = {"videofile": self.videofile, "comskip": self, "to_timestamp": to_timestamp, "w": w, "h": h}
         with open(self.basename + ".html", "w") as f:
             f.write(tmpl.render(tmpl_vars))
 
